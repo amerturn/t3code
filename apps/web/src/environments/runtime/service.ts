@@ -46,6 +46,7 @@ import {
   readSavedEnvironmentBearerToken,
   removeSavedEnvironmentBearerToken,
   type SavedEnvironmentRecord,
+  toPersistedSavedEnvironmentRecord,
   useSavedEnvironmentRegistryStore,
   useSavedEnvironmentRuntimeStore,
   waitForSavedEnvironmentRegistryHydration,
@@ -100,6 +101,7 @@ let needsProviderInvalidation = false;
 const THREAD_DETAIL_SUBSCRIPTION_IDLE_EVICTION_MS = 15 * 60 * 1000;
 const MAX_CACHED_THREAD_DETAIL_SUBSCRIPTIONS = 32;
 const NOOP = () => undefined;
+const SSH_HTTP_STATUS_RE = /^\[ssh_http:(\d+)\]\s/u;
 
 function getThreadDetailSubscriptionKey(environmentId: EnvironmentId, threadId: ThreadId): string {
   return scopedThreadKey(scopeThreadRef(environmentId, threadId));
@@ -391,16 +393,22 @@ function isoNow(): string {
   return new Date().toISOString();
 }
 
-function serializeSavedEnvironmentRecord(record: SavedEnvironmentRecord) {
-  return {
-    environmentId: record.environmentId,
-    label: record.label,
-    httpBaseUrl: record.httpBaseUrl,
-    wsBaseUrl: record.wsBaseUrl,
-    createdAt: record.createdAt,
-    lastConnectedAt: record.lastConnectedAt,
-    ...(record.desktopSsh ? { desktopSsh: record.desktopSsh } : {}),
-  } as const;
+function readSshHttpErrorStatus(error: unknown): number | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  const match = SSH_HTTP_STATUS_RE.exec(error.message);
+  if (!match) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(match[1] ?? "", 10);
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
+function isSshHttpAuthError(error: unknown, status: number): boolean {
+  return readSshHttpErrorStatus(error) === status;
 }
 
 function isDesktopSshTargetEqual(
@@ -433,10 +441,28 @@ function findSavedEnvironmentRecordByDesktopSshTarget(
   );
 }
 
-async function persistSavedEnvironmentRegistryRollback(): Promise<void> {
+function buildSavedEnvironmentRegistryById(
+  records: ReadonlyArray<SavedEnvironmentRecord>,
+): Record<EnvironmentId, SavedEnvironmentRecord> {
+  return Object.fromEntries(records.map((record) => [record.environmentId, record])) as Record<
+    EnvironmentId,
+    SavedEnvironmentRecord
+  >;
+}
+
+function snapshotSavedEnvironmentRegistry(): ReadonlyArray<SavedEnvironmentRecord> {
+  return listSavedEnvironmentRecords();
+}
+
+async function persistSavedEnvironmentRegistryRollback(
+  records: ReadonlyArray<SavedEnvironmentRecord>,
+): Promise<void> {
   await ensureLocalApi().persistence.setSavedEnvironmentRegistry(
-    listSavedEnvironmentRecords().map((entry) => serializeSavedEnvironmentRecord(entry)),
+    records.map((entry) => toPersistedSavedEnvironmentRecord(entry)),
   );
+  useSavedEnvironmentRegistryStore.setState({
+    byId: buildSavedEnvironmentRegistryById(records),
+  });
 }
 
 async function resolveDesktopSshEnvironmentBootstrap(
@@ -521,6 +547,7 @@ async function issueDesktopSshBearerSession(record: SavedEnvironmentRecord): Pro
   readonly bearerToken: string;
   readonly role: AuthSessionRole | null;
 }> {
+  const registrySnapshot = snapshotSavedEnvironmentRegistry();
   const prepared = await prepareSavedEnvironmentRecordForConnection(record, {
     issuePairingToken: true,
   });
@@ -537,7 +564,7 @@ async function issueDesktopSshBearerSession(record: SavedEnvironmentRecord): Pro
     bearerSession.sessionToken,
   );
   if (!didPersistBearerToken) {
-    await persistSavedEnvironmentRegistryRollback();
+    await persistSavedEnvironmentRegistryRollback(registrySnapshot);
     throw new Error("Unable to persist saved environment credentials.");
   }
 
@@ -1048,11 +1075,10 @@ async function ensureSavedEnvironmentConnection(
           options?.serverConfig ?? null,
         );
       } catch (error) {
-        if (
-          !record.desktopSsh ||
-          !isRemoteEnvironmentAuthHttpError(error) ||
-          error.status !== 401
-        ) {
+        const isAuthError = activeRecord.desktopSsh
+          ? isSshHttpAuthError(error, 401)
+          : isRemoteEnvironmentAuthHttpError(error) && error.status === 401;
+        if (!isAuthError) {
           throw error;
         }
 
@@ -1165,15 +1191,20 @@ export async function reconnectSavedEnvironment(environmentId: EnvironmentId): P
     await connection.reconnect();
   } catch (error) {
     if (record.desktopSsh) {
-      const issued = await issueDesktopSshBearerSession(
-        getSavedEnvironmentRecord(environmentId) ?? record,
-      );
-      await removeConnection(environmentId).catch(() => false);
-      await ensureSavedEnvironmentConnection(issued.record, {
-        bearerToken: issued.bearerToken,
-        role: issued.role,
-      });
-      return;
+      try {
+        const issued = await issueDesktopSshBearerSession(
+          getSavedEnvironmentRecord(environmentId) ?? record,
+        );
+        await removeConnection(environmentId).catch(() => false);
+        await ensureSavedEnvironmentConnection(issued.record, {
+          bearerToken: issued.bearerToken,
+          role: issued.role,
+        });
+        return;
+      } catch (recoveryError) {
+        setRuntimeError(environmentId, recoveryError);
+        throw recoveryError;
+      }
     }
     setRuntimeError(environmentId, error);
     throw error;
@@ -1204,9 +1235,12 @@ export async function addSavedEnvironment(input: {
         httpBaseUrl: resolvedTarget.httpBaseUrl,
       });
   const environmentId = descriptor.environmentId;
+  const registrySnapshot = snapshotSavedEnvironmentRegistry();
   const existingRecord =
     getSavedEnvironmentRecord(environmentId) ??
     findSavedEnvironmentRecordByDesktopSshTarget(input.desktopSsh);
+  const staleDesktopSshRecord =
+    existingRecord && existingRecord.environmentId !== environmentId ? existingRecord : null;
 
   const bearerSession = input.desktopSsh
     ? await bootstrapDesktopSshBearerSession(resolvedTarget.httpBaseUrl, resolvedTarget.credential)
@@ -1233,10 +1267,13 @@ export async function addSavedEnvironment(input: {
     bearerSession.sessionToken,
   );
   if (!didPersistBearerToken) {
-    await persistSavedEnvironmentRegistryRollback();
+    await persistSavedEnvironmentRegistryRollback(registrySnapshot);
     throw new Error("Unable to persist saved environment credentials.");
   }
   useSavedEnvironmentRegistryStore.getState().upsert(record);
+  if (staleDesktopSshRecord) {
+    await removeSavedEnvironment(staleDesktopSshRecord.environmentId);
+  }
   await removeConnection(environmentId).catch(() => false);
   await ensureSavedEnvironmentConnection(record, {
     bearerToken: bearerSession.sessionToken,
