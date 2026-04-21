@@ -1,7 +1,7 @@
 import type {
   ClaudeSettings,
-  ClaudeModelSelection,
   ModelCapabilities,
+  ModelSelection,
   ServerProvider,
   ServerProviderModel,
   ServerProviderAuth,
@@ -221,7 +221,7 @@ export function resolveClaudeEffort(
   return typeof value === "string" ? value : undefined;
 }
 
-export function resolveClaudeApiModelId(modelSelection: ClaudeModelSelection): string {
+export function resolveClaudeApiModelId(modelSelection: ModelSelection): string {
   switch (getModelSelectionOptionValue(modelSelection, "contextWindow")) {
     case "1m":
       return `${modelSelection.model}[1m]`;

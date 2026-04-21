@@ -1371,10 +1371,10 @@ const makeCodexAdapter = Effect.fn("makeCodexAdapter")(function* (
             ? { resumeCursor: input.resumeCursor }
             : {}),
           runtimeMode: input.runtimeMode,
-          ...(input.modelSelection?.provider === "codex"
+          ...(input.modelSelection?.instanceId === "codex"
             ? { model: input.modelSelection.model }
             : {}),
-          ...(input.modelSelection?.provider === "codex" &&
+          ...(input.modelSelection?.instanceId === "codex" &&
           getModelSelectionOptionValue(input.modelSelection, "fastMode") === true
             ? { serviceTier: "fast" }
             : {}),
@@ -1491,10 +1491,10 @@ const makeCodexAdapter = Effect.fn("makeCodexAdapter")(function* (
     return yield* session.runtime
       .sendTurn({
         ...(input.input !== undefined ? { input: input.input } : {}),
-        ...(input.modelSelection?.provider === "codex"
+        ...(input.modelSelection?.instanceId === "codex"
           ? { model: input.modelSelection.model }
           : {}),
-        ...(input.modelSelection?.provider === "codex" &&
+        ...(input.modelSelection?.instanceId === "codex" &&
         typeof getModelSelectionOptionValue(input.modelSelection, "reasoningEffort") === "string"
           ? {
               effort: getModelSelectionOptionValue(
@@ -1503,7 +1503,7 @@ const makeCodexAdapter = Effect.fn("makeCodexAdapter")(function* (
               ) as EffectCodexSchema.V2TurnStartParams__ReasoningEffort,
             }
           : {}),
-        ...(input.modelSelection?.provider === "codex" &&
+        ...(input.modelSelection?.instanceId === "codex" &&
         getModelSelectionOptionValue(input.modelSelection, "fastMode") === true
           ? { serviceTier: "fast" }
           : {}),

@@ -561,12 +561,12 @@ const CLAUDE_SETTING_SOURCES = [
 
 function buildPromptText(input: ProviderSendTurnInput): string {
   const rawEffortValue =
-    input.modelSelection?.provider === "claudeAgent"
+    input.modelSelection?.instanceId === "claudeAgent"
       ? getModelSelectionOptionValue(input.modelSelection, "effort")
       : null;
   const rawEffort = typeof rawEffortValue === "string" ? rawEffortValue : null;
   const claudeModel =
-    input.modelSelection?.provider === "claudeAgent" ? input.modelSelection.model : undefined;
+    input.modelSelection?.instanceId === "claudeAgent" ? input.modelSelection.model : undefined;
   const caps = getClaudeModelCapabilities(claudeModel);
 
   // For prompt injection, we check if the raw effort is a prompt-injected level (e.g. "ultrathink").
@@ -2845,7 +2845,9 @@ const makeClaudeAdapter = Effect.fn("makeClaudeAdapter")(function* (
       const claudeBinaryPath = claudeSettings.binaryPath;
       const extraArgs = parseCliArgs(claudeSettings.launchArgs).flags;
       const modelSelection =
-        input.modelSelection?.provider === "claudeAgent" ? input.modelSelection : undefined;
+        input.modelSelection !== undefined && input.modelSelection.instanceId === "claudeAgent"
+          ? input.modelSelection
+          : undefined;
       const caps = getClaudeModelCapabilities(modelSelection?.model);
       const descriptors = getProviderOptionDescriptors({ caps });
       const apiModelId = modelSelection ? resolveClaudeApiModelId(modelSelection) : undefined;
@@ -3031,7 +3033,9 @@ const makeClaudeAdapter = Effect.fn("makeClaudeAdapter")(function* (
   const sendTurn: ClaudeAdapterShape["sendTurn"] = Effect.fn("sendTurn")(function* (input) {
     const context = yield* requireSession(input.threadId);
     const modelSelection =
-      input.modelSelection?.provider === "claudeAgent" ? input.modelSelection : undefined;
+      input.modelSelection !== undefined && input.modelSelection.instanceId === "claudeAgent"
+        ? input.modelSelection
+        : undefined;
 
     if (context.turnState) {
       // Auto-close a stale synthetic turn (from background agent responses

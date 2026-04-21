@@ -10,7 +10,7 @@
 import { Effect, Layer, Option, Schema, Stream } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
-import { ClaudeModelSelection } from "@t3tools/contracts";
+import { type ModelSelection } from "@t3tools/contracts";
 import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@t3tools/shared/git";
 
 import { TextGenerationError } from "@t3tools/contracts";
@@ -84,7 +84,7 @@ const makeClaudeTextGeneration = Effect.gen(function* () {
     cwd: string;
     prompt: string;
     outputSchemaJson: S;
-    modelSelection: ClaudeModelSelection;
+    modelSelection: ModelSelection;
   }): Effect.fn.Return<S["Type"], TextGenerationError, S["DecodingServices"]> {
     const jsonSchemaStr = JSON.stringify(toJsonSchemaObject(outputSchemaJson));
     const caps = getClaudeModelCapabilities(modelSelection.model);
@@ -228,7 +228,7 @@ const makeClaudeTextGeneration = Effect.gen(function* () {
       includeBranch: input.includeBranch === true,
     });
 
-    if (input.modelSelection.provider !== "claudeAgent") {
+    if (input.modelSelection.instanceId !== "claudeAgent") {
       return yield* new TextGenerationError({
         operation: "generateCommitMessage",
         detail: "Invalid model selection.",
@@ -263,7 +263,7 @@ const makeClaudeTextGeneration = Effect.gen(function* () {
       diffPatch: input.diffPatch,
     });
 
-    if (input.modelSelection.provider !== "claudeAgent") {
+    if (input.modelSelection.instanceId !== "claudeAgent") {
       return yield* new TextGenerationError({
         operation: "generatePrContent",
         detail: "Invalid model selection.",
@@ -292,7 +292,7 @@ const makeClaudeTextGeneration = Effect.gen(function* () {
       attachments: input.attachments,
     });
 
-    if (input.modelSelection.provider !== "claudeAgent") {
+    if (input.modelSelection.instanceId !== "claudeAgent") {
       return yield* new TextGenerationError({
         operation: "generateBranchName",
         detail: "Invalid model selection.",
@@ -320,7 +320,7 @@ const makeClaudeTextGeneration = Effect.gen(function* () {
       attachments: input.attachments,
     });
 
-    if (input.modelSelection.provider !== "claudeAgent") {
+    if (input.modelSelection.instanceId !== "claudeAgent") {
       return yield* new TextGenerationError({
         operation: "generateThreadTitle",
         detail: "Invalid model selection.",

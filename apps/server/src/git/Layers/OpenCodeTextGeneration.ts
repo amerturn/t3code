@@ -1,11 +1,7 @@
 import { Effect, Exit, Fiber, Layer, Schema, Scope } from "effect";
 import * as Semaphore from "effect/Semaphore";
 
-import {
-  TextGenerationError,
-  type ChatAttachment,
-  type OpenCodeModelSelection,
-} from "@t3tools/contracts";
+import { TextGenerationError, type ChatAttachment, type ModelSelection } from "@t3tools/contracts";
 import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@t3tools/shared/git";
 import { getModelSelectionOptionValue } from "@t3tools/shared/model";
 
@@ -267,7 +263,7 @@ const makeOpenCodeTextGeneration = Effect.gen(function* () {
     readonly cwd: string;
     readonly prompt: string;
     readonly outputSchemaJson: S;
-    readonly modelSelection: OpenCodeModelSelection;
+    readonly modelSelection: ModelSelection;
     readonly attachments?: ReadonlyArray<ChatAttachment> | undefined;
   }) {
     const parsedModel = parseOpenCodeModelSlug(input.modelSelection.model);
@@ -384,7 +380,7 @@ const makeOpenCodeTextGeneration = Effect.gen(function* () {
   const generateCommitMessage: TextGenerationShape["generateCommitMessage"] = Effect.fn(
     "OpenCodeTextGeneration.generateCommitMessage",
   )(function* (input) {
-    if (input.modelSelection.provider !== "opencode") {
+    if (input.modelSelection.instanceId !== "opencode") {
       return yield* new TextGenerationError({
         operation: "generateCommitMessage",
         detail: "Invalid model selection.",
@@ -417,7 +413,7 @@ const makeOpenCodeTextGeneration = Effect.gen(function* () {
   const generatePrContent: TextGenerationShape["generatePrContent"] = Effect.fn(
     "OpenCodeTextGeneration.generatePrContent",
   )(function* (input) {
-    if (input.modelSelection.provider !== "opencode") {
+    if (input.modelSelection.instanceId !== "opencode") {
       return yield* new TextGenerationError({
         operation: "generatePrContent",
         detail: "Invalid model selection.",
@@ -448,7 +444,7 @@ const makeOpenCodeTextGeneration = Effect.gen(function* () {
   const generateBranchName: TextGenerationShape["generateBranchName"] = Effect.fn(
     "OpenCodeTextGeneration.generateBranchName",
   )(function* (input) {
-    if (input.modelSelection.provider !== "opencode") {
+    if (input.modelSelection.instanceId !== "opencode") {
       return yield* new TextGenerationError({
         operation: "generateBranchName",
         detail: "Invalid model selection.",
@@ -476,7 +472,7 @@ const makeOpenCodeTextGeneration = Effect.gen(function* () {
   const generateThreadTitle: TextGenerationShape["generateThreadTitle"] = Effect.fn(
     "OpenCodeTextGeneration.generateThreadTitle",
   )(function* (input) {
-    if (input.modelSelection.provider !== "opencode") {
+    if (input.modelSelection.instanceId !== "opencode") {
       return yield* new TextGenerationError({
         operation: "generateThreadTitle",
         detail: "Invalid model selection.",
