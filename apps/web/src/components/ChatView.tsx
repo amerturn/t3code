@@ -8,6 +8,7 @@ import {
   type ProviderKind,
   type ProjectId,
   type ProviderApprovalDecision,
+  ProviderInstanceId,
   type ServerProvider,
   type ResolvedKeybindingsConfig,
   type ScopedThreadRef,
@@ -776,7 +777,7 @@ export default function ChatView(props: ChatViewProps) {
             threadId,
             draftThread,
             fallbackDraftProject?.defaultModelSelection ?? {
-              provider: "codex",
+              instanceId: ProviderInstanceId.make("codex"),
               model: DEFAULT_MODEL_BY_PROVIDER.codex,
             },
             localDraftError,
@@ -1030,7 +1031,9 @@ export default function ChatView(props: ChatViewProps) {
 
   const selectedProviderByThreadId = composerActiveProvider ?? null;
   const threadProvider =
-    activeThread?.modelSelection.provider ?? activeProject?.defaultModelSelection?.provider ?? null;
+    activeThread?.modelSelection.instanceId ??
+    activeProject?.defaultModelSelection?.instanceId ??
+    null;
   const lockedProvider = deriveLockedProvider({
     thread: activeThread,
     selectedProvider: selectedProviderByThreadId,
@@ -1944,7 +1947,7 @@ export default function ChatView(props: ChatViewProps) {
       if (
         input.modelSelection !== undefined &&
         (input.modelSelection.model !== serverThread.modelSelection.model ||
-          input.modelSelection.provider !== serverThread.modelSelection.provider ||
+          input.modelSelection.instanceId !== serverThread.modelSelection.instanceId ||
           JSON.stringify(input.modelSelection.options ?? null) !==
             JSON.stringify(serverThread.modelSelection.options ?? null))
       ) {
@@ -3131,7 +3134,7 @@ export default function ChatView(props: ChatViewProps) {
         model,
       );
       const nextModelSelection: ModelSelection = {
-        provider: resolvedProvider,
+        instanceId: ProviderInstanceId.make(resolvedProvider),
         model: resolvedModel,
       };
       setComposerDraftModelSelection(
