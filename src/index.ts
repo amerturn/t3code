@@ -32,7 +32,7 @@ program
   .description("Generate code using an AI provider")
   .argument("[prompt]", "The prompt describing what to generate")
   .option("-f, --file <path>", "Path to a spec or prompt file")
-  .option("-p, --provider <name>", "AI provider to use (openai, anthropic, etc.)")
+  .option("-p, --provider <name>", "AI provider to use (openai, anthropic, etc.)", "anthropic") // personal default: I use anthropic
   .option("-m, --model <name>", "Model to use for generation")
   .option("-o, --output <path>", "Output file path")
   .option("--dry-run", "Preview the prompt without making API calls")
