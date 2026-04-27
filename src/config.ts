@@ -25,7 +25,7 @@ export interface T3CodeConfig {
 const DEFAULT_CONFIG: Partial<T3CodeConfig> = {
   provider: "openai",
   model: "gpt-4o",
-  maxTokens: 4096,
+  maxTokens: 8192, // bumped from 4096 — 4k was too short for larger refactors
   temperature: 0.2,
   stream: true,
 };
@@ -95,28 +95,4 @@ export function saveGlobalConfig(config: Partial<T3CodeConfig>): void {
     try {
       existing = JSON.parse(fs.readFileSync(GLOBAL_CONFIG_PATH, "utf-8"));
     } catch {
-      // ignore parse errors, overwrite
-    }
-  }
-
-  const updated = { ...existing, ...config };
-  fs.writeFileSync(GLOBAL_CONFIG_PATH, JSON.stringify(updated, null, 2), "utf-8");
-}
-
-/**
- * Validates that a config has the minimum required fields.
- */
-export function validateConfig(config: T3CodeConfig): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-
-  if (!config.provider) {
-    errors.push("Missing required field: provider");
-  }
-  if (!config.apiKey) {
-    errors.push(
-      "Missing API key. Set T3CODE_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY environment variable."
-    );
-  }
-
-  return { valid: errors.length === 0, errors };
-}
+      // ignore parse errors, overwr
