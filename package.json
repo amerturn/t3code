@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "clean": "rm -rf dist",
-    "rebuild": "npm run clean && npm run build"
+    "rebuild": "npm run clean && npm run build",
+    "lint:fix": "eslint src --ext .ts --fix"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.0",
@@ -37,7 +38,7 @@
     "vitest": "^1.6.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "license": "MIT"
 }
