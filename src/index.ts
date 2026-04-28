@@ -33,7 +33,7 @@ program
   .argument("[prompt]", "The prompt describing what to generate")
   .option("-f, --file <path>", "Path to a spec or prompt file")
   .option("-p, --provider <name>", "AI provider to use (openai, anthropic, etc.)", "anthropic") // personal default: I use anthropic
-  .option("-m, --model <name>", "Model to use for generation")
+  .option("-m, --model <name>", "Model to use for generation", "claude-opus-4-5") // personal default: best results for my use cases
   .option("-o, --output <path>", "Output file path")
   .option("--dry-run", "Preview the prompt without making API calls")
   .action(async (prompt, options) => {
