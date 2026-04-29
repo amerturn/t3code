@@ -26,7 +26,7 @@ const DEFAULT_CONFIG: Partial<T3CodeConfig> = {
   provider: "openai",
   model: "gpt-4o",
   maxTokens: 8192, // bumped from 4096 — 4k was too short for larger refactors
-  temperature: 0.1, // lowered from 0.2 — I prefer more deterministic output for refactors
+  temperature: 0.0, // set to 0 — I want fully deterministic output, 0.1 still felt random
   stream: true,
 };
 
@@ -92,5 +92,4 @@ export function saveGlobalConfig(config: Partial<T3CodeConfig>): void {
 
   let existing: Partial<T3CodeConfig> = {};
   if (fs.existsSync(GLOBAL_CONFIG_PATH)) {
-    try {
-      existing = JSON.parse(fs.readFileSync(GLOBAL_CONFIG_PATH, "
+    
