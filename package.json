@@ -41,5 +41,6 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "author": "personal fork — not for distribution"
 }
